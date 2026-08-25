@@ -1,0 +1,41 @@
+/** إعدادات النظام. لا تكتب أي سر هنا — كلها في Script Properties. */
+var P = PropertiesService.getScriptProperties();
+
+function cfg(key, required) {
+  var v = P.getProperty(key);
+  if (!v && required) throw new Error('إعداد ناقص: ' + key);
+  return v;
+}
+
+var CFG = {
+  adminEmail:   function () { return (cfg('ADMIN_EMAIL', true) || '').toLowerCase(); },
+  sheetId:      function () { return cfg('SHEET_ID', true); },
+  rootFolderId: function () { return cfg('ROOT_FOLDER_ID', true); },
+  writeSecret:  function () { return cfg('WRITE_SECRET', true); },
+  readExecUrl:  function () { return cfg('READ_EXEC_URL', true); }, // رابط نشرة القراءة (تعمل بصلاحيتي)
+  geminiKey:    function () { return cfg('GEMINI_KEY', false); }    // اختياري: بدونه يُعطَّل الفحص
+};
+
+var SHEETS = {
+  subjects: { name: 'Subjects', head: ['id','name','folderId','createdTs','active','requireCodeToView','viewCode'] },
+  entries:  { name: 'Entries',  head: ['entryId','subjectId','version','type','title','body','fileUrl','fileName','authorEmail','authorName','ts','deleted','client'] },
+  editors:  { name: 'Editors',  head: ['email','name','subjectId','status','joinedTs','termsVersion'] },
+  invites:  { name: 'Invites',  head: ['code','name','subjectId','createdTs','status','usedTs','usedEmail'] }
+};
+
+var TERMS_VERSION = '1.0';
+
+/** يُشغَّل مرة واحدة بعد ضبط الخصائص: ينشئ الجداول والرؤوس. */
+function setup() {
+  var ss = SpreadsheetApp.openById(CFG.sheetId());
+  Object.keys(SHEETS).forEach(function (k) {
+    var spec = SHEETS[k];
+    var sh = ss.getSheetByName(spec.name) || ss.insertSheet(spec.name);
+    if (sh.getLastRow() === 0) {
+      sh.getRange(1, 1, 1, spec.head.length).setValues([spec.head]).setFontWeight('bold');
+      sh.setFrozenRows(1);
+    }
+  });
+  DriveApp.getFolderById(CFG.rootFolderId()); // تحقق مبكر من الصلاحية
+  return 'تم التهيئة';
+}

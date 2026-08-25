@@ -1,0 +1,259 @@
+<!-- لوحة المحرر/المدير — تُقدَّم من Google نفسها، فالهوية متحققة ولا مجال لانتحالها -->
+<style>
+  :root{--bg:#0f1216;--card:#171c22;--line:#262d36;--fg:#e8edf2;--dim:#93a1b0;--acc:#4d9fff;--bad:#ff6b6b;--ok:#3ecf8e}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,"SF Arabic",system-ui,sans-serif;direction:rtl}
+  .wrap{max-width:760px;margin:0 auto;padding:18px}
+  h1{font-size:19px;margin:0 0 4px}
+  .dim{color:var(--dim);font-size:13px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+  input,textarea,select,button{font:inherit;font-size:15px;border-radius:10px;border:1px solid var(--line);background:#10151a;color:var(--fg);padding:11px 12px;width:100%}
+  textarea{min-height:110px;resize:vertical}
+  button{background:var(--acc);border:0;color:#04121f;font-weight:700;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--fg);font-weight:500}
+  button.danger{background:transparent;border:1px solid var(--bad);color:var(--bad);font-weight:500}
+  .row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:140px}
+  .tabs{display:flex;gap:6px;margin:14px 0}
+  .tabs button{flex:1;background:transparent;border:1px solid var(--line);color:var(--dim);font-weight:600}
+  .tabs button.on{background:var(--acc);color:#04121f;border-color:var(--acc)}
+  .item{border-bottom:1px solid var(--line);padding:12px 0}.item:last-child{border:0}
+  .tag{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
+  .msg{padding:11px 13px;border-radius:10px;margin:10px 0;font-size:14px;display:none}
+  .msg.err{background:#2a1416;color:var(--bad);display:block}
+  .msg.ok{background:#0f2a20;color:var(--ok);display:block}
+  code{background:#0b0f13;padding:3px 7px;border-radius:6px;font-size:13px;user-select:all;word-break:break-all}
+  .hide{display:none}
+  label{font-size:13px;color:var(--dim);display:block;margin:10px 0 5px}
+</style>
+
+<div class="wrap">
+  <h1>لوحة المادة</h1>
+  <div class="dim" id="who">…جارٍ التحقق من هويتك</div>
+  <div class="msg" id="msg"></div>
+
+  <!-- غير مفعّل: إدخال رمز الدعوة + الشروط -->
+  <div class="card hide" id="gate">
+    <b>تفعيل حسابك</b>
+    <div class="dim">أدخل رمز الدعوة الذي استلمته. يُستهلك مرة واحدة ويُربط بحسابك نهائياً.</div>
+    <label>رمز الدعوة</label>
+    <input id="code" placeholder="xxxxx-xxxxx-xxxxx" autocomplete="off">
+    <label style="display:flex;gap:9px;align-items:flex-start;margin-top:14px">
+      <input type="checkbox" id="terms" style="width:18px;flex:none;margin-top:4px">
+      <span style="color:var(--fg);font-size:13.5px">
+        أقرّ بمسؤوليتي الكاملة عن أي محتوى أضيفه، وبأنه لا يخالف الأنظمة السارية ولا الضوابط الشرعية.
+        وأعلم أن المنصة أداة تنسيق تقنية لا تتحمل مسؤولية ما يُدخله المستخدمون، وأن كل إدخال يُسجَّل
+        ببريدي الإلكتروني ووقته ونوع جهازي لأغراض الأمان والمساءلة، وأن كل نسخة تبقى محفوظة ومرئية للجميع.
+      </span>
+    </label>
+    <button onclick="redeem()" style="margin-top:12px">موافق — فعّل حسابي</button>
+  </div>
+
+  <!-- مفعّل -->
+  <div class="hide" id="app">
+    <div class="tabs">
+      <button class="on" data-t="add" onclick="tab('add')">إضافة</button>
+      <button data-t="list" onclick="tab('list')">المحتوى</button>
+      <button data-t="admin" class="hide" onclick="tab('admin')">الإدارة</button>
+    </div>
+
+    <div id="t-add">
+      <div class="card">
+        <label>المادة</label>
+        <select id="subj" onchange="loadFeed()"></select>
+        <div class="row" style="margin-top:10px">
+          <div><label>النوع</label>
+            <select id="type"><option value="notice">تنبيه</option><option value="date">موعد</option><option value="file">ملف</option></select>
+          </div>
+          <div><label>العنوان</label><input id="title" placeholder="مثال: تأجيل محاضرة الأحد"></div>
+        </div>
+        <label>التفاصيل</label>
+        <textarea id="body" placeholder="اكتب التفاصيل…"></textarea>
+        <label>مرفق (اختياري — حتى ١٠ ميجابايت)</label>
+        <input type="file" id="file">
+        <button onclick="save()" style="margin-top:14px" id="saveBtn">نشر</button>
+        <div class="dim" style="margin-top:8px">يُفحص النص آلياً قبل الحفظ، ويُوقَّع باسمك وبريدك.</div>
+      </div>
+    </div>
+
+    <div id="t-list" class="hide"><div class="card" id="feed">…</div></div>
+
+    <div id="t-admin" class="hide">
+      <div class="card">
+        <b>مادة جديدة</b>
+        <label>الاسم</label><input id="nsName" placeholder="مثال: فقه ٣">
+        <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="nsCode" style="width:18px;flex:none"> تتطلب رمز دخول للعرض</label>
+        <button onclick="newSubject()" style="margin-top:10px">أنشئ وأعطني الرابط</button>
+        <div id="nsOut" class="dim" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <b>دعوة محرر</b>
+        <div class="dim">الاسم الذي تكتبه هنا هو ما سيُوقَّع به كل إدخالاته — لا يستطيع تغييره.</div>
+        <label>اسم الشخص</label><input id="invName" placeholder="محمد العتيبي — شعبة ٣">
+        <label>المادة</label><select id="invSubj"></select>
+        <button onclick="newInvite()" style="margin-top:10px">أنشئ رمز دعوة</button>
+        <div id="invOut" class="dim" style="margin-top:10px"></div>
+      </div>
+      <div class="card"><b>المحررون والدعوات</b><div id="adminList" class="dim">…</div></div>
+      <div class="card">
+        <b>اسأل عن حالة المواد</b>
+        <input id="q" placeholder="ما المواعيد القادمة هذا الأسبوع؟">
+        <button onclick="ask()" style="margin-top:10px">اسأل</button>
+        <div id="ans" style="margin-top:12px;white-space:pre-wrap"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var ME = null, SUBS = [], FEED = null;
+var $ = function (id) { return document.getElementById(id); };
+
+function msg(text, kind) {
+  var m = $('msg'); m.className = 'msg ' + (kind || 'ok'); m.textContent = text;
+  if (kind !== 'err') setTimeout(function () { m.className = 'msg'; }, 4000);
+}
+function call(action, payload) {
+  return new Promise(function (res, rej) {
+    google.script.run.withSuccessHandler(res).withFailureHandler(function (e) { rej(e); }).rpc(action, payload || {});
+  });
+}
+function tab(t) {
+  ['add', 'list', 'admin'].forEach(function (k) {
+    $('t-' + k).classList.toggle('hide', k !== t);
+    document.querySelector('[data-t=' + k + ']').classList.toggle('on', k === t);
+  });
+  if (t === 'list') loadFeed();
+  if (t === 'admin') loadAdmin();
+}
+
+call('whoami').then(function (w) {
+  ME = w;
+  $('who').textContent = w.email + (w.role === 'admin' ? ' — مدير' : w.role === 'editor' ? ' — محرر: ' + w.name : '');
+  if (w.role === 'guest') { $('gate').classList.remove('hide'); return; }
+  $('app').classList.remove('hide');
+  if (w.role === 'admin') document.querySelector('[data-t=admin]').classList.remove('hide');
+  loadSubjects();
+}).catch(function (e) { msg(e.message || e, 'err'); });
+
+function redeem() {
+  if (!$('terms').checked) return msg('يجب الموافقة على الشروط أولاً', 'err');
+  call('redeem', { code: $('code').value.trim() })
+    .then(function () { location.reload(); })
+    .catch(function (e) { msg(e.message || e, 'err'); });
+}
+
+function loadSubjects() {
+  return call('subjects').then(function (list) {
+    SUBS = list;
+    var opts = list.map(function (s) { return '<option value="' + s.id + '">' + s.name + '</option>'; }).join('');
+    $('subj').innerHTML = opts;
+    if ($('invSubj')) $('invSubj').innerHTML = '<option value="*">كل المواد</option>' + opts;
+    if (list.length) loadFeed();
+  }).catch(function (e) { msg(e.message || e, 'err'); });
+}
+
+function loadFeed() {
+  var sid = $('subj').value; if (!sid) return;
+  $('feed').textContent = '…';
+  call('feed', { subjectId: sid }).then(function (f) {
+    FEED = f;
+    $('feed').innerHTML = f.items.length ? f.items.map(function (it) {
+      var c = it.current;
+      return '<div class="item"><div class="row" style="justify-content:space-between"><b>' + esc(c.title) + '</b>' +
+        '<span class="tag">' + esc(c.type) + '</span></div>' +
+        '<div style="white-space:pre-wrap">' + esc(c.body) + '</div>' +
+        (c.fileUrl ? '<a href="' + c.fileUrl + '" target="_blank" style="color:var(--acc)">' + esc(c.fileName) + '</a>' : '') +
+        '<div class="dim">' + esc(c.authorName) + ' — ' + fmt(c.ts) + ' — نسخة ' + c.version + '</div>' +
+        '<div class="row" style="margin-top:8px"><button class="ghost" onclick="edit(\'' + it.entryId + '\')">تعديل</button>' +
+        '<button class="danger" onclick="del(\'' + it.entryId + '\')">حذف</button></div></div>';
+    }).join('') : '<span class="dim">لا يوجد محتوى بعد.</span>';
+  }).catch(function (e) { $('feed').textContent = e.message || e; });
+}
+
+var editing = null;
+function edit(entryId) {
+  var it = FEED.items.filter(function (x) { return x.entryId === entryId; })[0];
+  editing = entryId; $('title').value = it.current.title; $('body').value = it.current.body;
+  $('type').value = it.current.type; $('saveBtn').textContent = 'حفظ التعديل (نسخة جديدة)';
+  tab('add'); window.scrollTo(0, 0);
+}
+function del(entryId) {
+  if (!confirm('حذف هذا الإدخال؟ يبقى محفوظاً في السجل العام.')) return;
+  call('deleteEntry', { entryId: entryId, subjectId: $('subj').value })
+    .then(function () { msg('حُذف'); loadFeed(); }).catch(function (e) { msg(e.message || e, 'err'); });
+}
+
+function save() {
+  var btn = $('saveBtn'); btn.disabled = true; btn.textContent = 'جارٍ النشر…';
+  var pl = {
+    subjectId: $('subj').value, entryId: editing, type: $('type').value,
+    title: $('title').value.trim(), body: $('body').value.trim(),
+    client: navigator.userAgent
+  };
+  if (!pl.title) { btn.disabled = false; btn.textContent = 'نشر'; return msg('العنوان مطلوب', 'err'); }
+  var f = $('file').files[0];
+  (f ? toB64(f) : Promise.resolve(null)).then(function (file) {
+    if (file) pl.file = file;
+    return call('saveEntry', pl);
+  }).then(function () {
+    msg('تم النشر'); editing = null;
+    $('title').value = ''; $('body').value = ''; $('file').value = '';
+    btn.textContent = 'نشر'; btn.disabled = false; loadFeed();
+  }).catch(function (e) {
+    msg(e.message || e, 'err'); btn.textContent = 'نشر'; btn.disabled = false;
+  });
+}
+
+function toB64(f) {
+  if (f.size > 10 * 1024 * 1024) return Promise.reject(new Error('الملف أكبر من ١٠ ميجابايت'));
+  return new Promise(function (res, rej) {
+    var r = new FileReader();
+    r.onload = function () { res({ name: f.name, mime: f.type, bytes: r.result.split(',')[1] }); };
+    r.onerror = rej; r.readAsDataURL(f);
+  });
+}
+
+function newSubject() {
+  call('createSubject', { name: $('nsName').value.trim(), requireCodeToView: $('nsCode').checked })
+    .then(function (s) {
+      var url = SITE + '?m=' + s.id + (s.viewCode ? '&c=' + s.viewCode : '');
+      $('nsOut').innerHTML = 'رابط الطلاب:<br><code>' + url + '</code>';
+      $('nsName').value = ''; loadSubjects();
+    }).catch(function (e) { msg(e.message || e, 'err'); });
+}
+function newInvite() {
+  call('createInvite', { name: $('invName').value.trim(), subjectId: $('invSubj').value })
+    .then(function (i) {
+      $('invOut').innerHTML = 'رمز ' + esc(i.name) + ':<br><code>' + i.code + '</code><br>' +
+        '<span class="dim">يفتحه من رابط اللوحة نفسه ويُستهلك مرة واحدة.</span>';
+      $('invName').value = ''; loadAdmin();
+    }).catch(function (e) { msg(e.message || e, 'err'); });
+}
+function loadAdmin() {
+  call('adminData').then(function (d) {
+    $('adminList').innerHTML =
+      '<div style="margin-bottom:10px"><b style="color:var(--fg)">المحررون</b></div>' +
+      (d.editors.length ? d.editors.map(function (e) {
+        return '<div class="item"><b style="color:var(--fg)">' + esc(e.name) + '</b> — ' + esc(e.email) +
+          ' <span class="tag">' + e.status + '</span>' +
+          (e.status === 'active' ? ' <button class="danger" style="width:auto;padding:4px 10px;margin-top:6px" onclick="susp(\'' + e.email + '\')">تعطيل</button>' : '') + '</div>';
+      }).join('') : '<div class="dim">لا أحد بعد.</div>') +
+      '<div style="margin:14px 0 8px"><b style="color:var(--fg)">الدعوات</b></div>' +
+      (d.invites.length ? d.invites.map(function (i) {
+        return '<div class="item">' + esc(i.name) + ' — <span class="tag">' + i.status + '</span>' +
+          (i.status === 'open' ? ' <code>' + i.code + '</code> <button class="danger" style="width:auto;padding:4px 10px" onclick="revoke(\'' + i.code + '\')">إلغاء</button>' : '') + '</div>';
+      }).join('') : '<div class="dim">لا دعوات.</div>');
+  }).catch(function (e) { $('adminList').textContent = e.message || e; });
+}
+function susp(email) { if (confirm('تعطيل ' + email + '؟')) call('suspendEditor', { email: email }).then(loadAdmin); }
+function revoke(code) { call('revokeInvite', { code: code }).then(loadAdmin); }
+function ask() {
+  $('ans').textContent = '…';
+  call('ask', { question: $('q').value }).then(function (r) { $('ans').textContent = r.answer; })
+    .catch(function (e) { $('ans').textContent = e.message || e; });
+}
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+function fmt(ts) { try { return new Date(ts).toLocaleString('ar-SA'); } catch (e) { return ts; } }
+var SITE = '<?= (PropertiesService.getScriptProperties().getProperty("SITE_URL") || "https://ANA541.github.io/madda-board/") ?>';
+</script>
