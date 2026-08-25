@@ -170,10 +170,11 @@ function loadFeed() {
   }).catch(function (e) { $('feed').textContent = e.message || e; });
 }
 
-var editing = null;
+var editing = null, editingFile = null;
 function edit(entryId) {
   var it = FEED.items.filter(function (x) { return x.entryId === entryId; })[0];
-  editing = entryId; $('title').value = it.current.title; $('body').value = it.current.body;
+  editing = entryId; editingFile = { url: it.current.fileUrl || '', name: it.current.fileName || '' };
+  $('title').value = it.current.title; $('body').value = it.current.body;
   $('type').value = it.current.type; $('saveBtn').textContent = 'حفظ التعديل (نسخة جديدة)';
   tab('add'); window.scrollTo(0, 0);
 }
@@ -188,7 +189,9 @@ function save() {
   var pl = {
     subjectId: $('subj').value, entryId: editing, type: $('type').value,
     title: $('title').value.trim(), body: $('body').value.trim(),
-    client: navigator.userAgent
+    client: navigator.userAgent,
+    keepFileUrl: editing && editingFile ? editingFile.url : '',
+    keepFileName: editing && editingFile ? editingFile.name : ''
   };
   if (!pl.title) { btn.disabled = false; btn.textContent = 'نشر'; return msg('العنوان مطلوب', 'err'); }
   var f = $('file').files[0];
@@ -196,7 +199,7 @@ function save() {
     if (file) pl.file = file;
     return call('saveEntry', pl);
   }).then(function () {
-    msg('تم النشر'); editing = null;
+    msg('تم النشر'); editing = null; editingFile = null;
     $('title').value = ''; $('body').value = ''; $('file').value = '';
     btn.textContent = 'نشر'; btn.disabled = false; loadFeed();
   }).catch(function (e) {
@@ -255,5 +258,5 @@ function ask() {
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
 function fmt(ts) { try { return new Date(ts).toLocaleString('ar-SA'); } catch (e) { return ts; } }
-var SITE = '<?= (PropertiesService.getScriptProperties().getProperty("SITE_URL") || "https://ANA541.github.io/madda-board/") ?>';
+var SITE = '<?= (PropertiesService.getScriptProperties().getProperty("SITE_URL") || "https://a541ana-droid.github.io/madda-board/") ?>';
 </script>

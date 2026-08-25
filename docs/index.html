@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>لوحة المادة</title>
 <link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#0f1216">
 <style>
   :root{--bg:#0f1216;--card:#171c22;--line:#262d36;--fg:#e8edf2;--dim:#93a1b0;--acc:#4d9fff;--warn:#ffb545}
@@ -49,8 +50,11 @@
 const API = 'PASTE_READ_EXEC_URL_HERE';
 
 const qs = new URLSearchParams(location.search);
-const SID = qs.get('m') || qs.get('madda');
-const VC = qs.get('c') || '';
+const LAST = 'lastSubject';
+let SID = qs.get('m') || qs.get('madda');
+let VC = qs.get('c') || '';
+if (!SID) { try { const l = JSON.parse(localStorage.getItem(LAST) || 'null'); if (l) { SID = l.m; VC = l.c || ''; } } catch {} }
+else localStorage.setItem(LAST, JSON.stringify({ m: SID, c: VC }));
 const KEY = 'feed:' + SID + ':' + VC;
 let DATA = null, FILTER = 'all';
 
@@ -76,6 +80,18 @@ function render() {
         ${v.deleted ? '<div class="dim">حُذف</div>' : `<div class="body dim">${esc(v.title)}${v.body ? '\n'+esc(v.body) : ''}</div>`}</div>`).join('')}</div>
     </article>`;
   }).join('') : '<div class="empty">لا يوجد محتوى في هذا التصنيف.</div>';
+}
+function askCode() {
+  $('#name').textContent = 'مادة محمية';
+  $('#sub').textContent = '';
+  $('#list').innerHTML = `<div class="card"><div class="dim">هذه المادة تتطلب رمز دخول.</div>
+    <input id="vc" placeholder="الرمز" style="width:100%;margin:10px 0;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:inherit">
+    <button onclick="useCode()" style="width:100%;padding:11px;border:0;border-radius:10px;background:var(--acc);color:#fff;font:inherit;font-weight:700">دخول</button></div>`;
+}
+function useCode() {
+  VC = document.getElementById('vc').value.trim();
+  localStorage.setItem(LAST, JSON.stringify({ m: SID, c: VC }));
+  refresh();
 }
 function tog(id) { const b = document.getElementById('h-'+id); b.style.display = b.style.display === 'block' ? 'none' : 'block'; }
 
@@ -104,6 +120,7 @@ async function refresh() {
     $('#sub').textContent = 'محدَّث — ' + fmt(DATA.fetchedAt);
     $('#bar').style.display = 'none';
   } catch (e) {
+    if (/رمز دخول/.test(e.message || '')) { askCode(); return; }
     if (!showCached()) {
       $('#sub').textContent = '';
       $('#list').innerHTML = `<div class="empty">${esc(navigator.onLine ? (e.message||'تعذّر التحميل') : 'لا يوجد اتصال، ولا نسخة محفوظة على هذا الجهاز.')}</div>`;

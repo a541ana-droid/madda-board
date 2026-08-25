@@ -90,7 +90,15 @@ function nextVersion_(entryId) {
 }
 
 /** يحفظ نسخة جديدة دائماً — لا استبدال ولا حذف فعلي. */
+function throttle_(email) {
+  var c = CacheService.getScriptCache(), k = 'w:' + email;
+  var n = Number(c.get(k) || 0) + 1;
+  c.put(k, String(n), 60);
+  if (n > 15) throw new Error('عدد كبير من العمليات خلال دقيقة — انتظر قليلاً.');
+}
+
 function saveEntry_(actor, payload) {
+  throttle_(actor.email);
   var subj = subjectById_(payload.subjectId);
   if (!subj) throw new Error('المادة غير موجودة');
 
@@ -102,6 +110,9 @@ function saveEntry_(actor, payload) {
   if (payload.file && payload.file.bytes) file = uploadFile_(subj.folderId, payload.file);
 
   var entryId = payload.entryId || id_(10);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
   append_('entries', {
     entryId: entryId, subjectId: subj.id, version: nextVersion_(entryId),
     type: payload.type || 'text', title: payload.title || '', body: payload.body || '',
@@ -110,6 +121,7 @@ function saveEntry_(actor, payload) {
     authorEmail: actor.email, authorName: actor.name, ts: now_(),
     deleted: false, client: String(payload.client || '').slice(0, 200)
   });
+  } finally { lock.releaseLock(); }
   return { entryId: entryId };
 }
 
