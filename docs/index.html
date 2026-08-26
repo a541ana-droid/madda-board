@@ -111,8 +111,9 @@ function stale(msg) { $('#bar').style.display = 'block'; $('#bar').textContent =
 
 async function refresh() {
   try {
+    if (API.startsWith('PASTE_')) throw new Error('لم يُربط النظام بعد بالخادم.');
     const r = await fetch(`${API}?api=feed&m=${encodeURIComponent(SID)}&c=${encodeURIComponent(VC)}`);
-    const j = await r.json();
+    let j; try { j = await r.json(); } catch { throw new Error('تعذّر الوصول إلى الخادم.'); }
     if (!j.ok) throw new Error(j.error);
     DATA = j.data;
     localStorage.setItem(KEY, JSON.stringify(DATA));
